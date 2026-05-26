@@ -1,0 +1,1596 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生成绩分析系统 (按科目排序版)</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', 'Microsoft YaHei', sans-serif;
+        }
+        
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background-color: #fff;
+            border-radius: 12px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+            color: white;
+            padding: 25px 30px;
+            text-align: center;
+        }
+        
+        h1 {
+            font-size: 2.4rem;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px;
+        }
+        
+        .subtitle {
+            font-size: 1rem;
+            opacity: 0.9;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            padding: 30px;
+        }
+        
+        @media (max-width: 1100px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .upload-section, .controls-section {
+            background-color: #f9fafc;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .section-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #eaeff5;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .section-title i {
+            color: #3498db;
+        }
+        
+        .file-upload-area {
+            border: 2px dashed #3498db;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 20px;
+            background-color: #f0f8ff;
+        }
+        
+        .file-upload-area:hover {
+            background-color: #e6f2ff;
+            border-color: #2980b9;
+        }
+        
+        .file-upload-area i {
+            font-size: 3rem;
+            color: #3498db;
+            margin-bottom: 15px;
+        }
+        
+        .file-upload-area p {
+            margin: 10px 0;
+            color: #555;
+        }
+        
+        .file-name {
+            margin-top: 15px;
+            font-weight: 600;
+            color: #2c3e50;
+            word-break: break-all;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .control-group {
+            flex: 1 1 200px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        select, input {
+            width: 100%;
+            padding: 12px 15px;
+            border: 1px solid #dce4e6;
+            border-radius: 8px;
+            font-size: 1rem;
+            background-color: white;
+            transition: border 0.3s;
+        }
+        
+        select:focus, input:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2);
+        }
+        
+        .btn {
+            background: linear-gradient(to right, #3498db, #2c80b9);
+            color: white;
+            border: none;
+            padding: 14px 25px;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            background: linear-gradient(to right, #2980b9, #2573a7);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(41, 128, 185, 0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn-analyze {
+            background: linear-gradient(to right, #2ecc71, #27ae60);
+        }
+        
+        .btn-analyze:hover {
+            background: linear-gradient(to right, #27ae60, #219955);
+            box-shadow: 0 4px 12px rgba(39, 174, 96, 0.3);
+        }
+        
+        .btn-export {
+            background: linear-gradient(to right, #9b59b6, #8e44ad);
+            margin-top: 10px;
+        }
+        
+        .btn-export:hover {
+            background: linear-gradient(to right, #8e44ad, #7d3c98);
+            box-shadow: 0 4px 12px rgba(155, 89, 182, 0.3);
+        }
+        
+        .results-section {
+            grid-column: 1 / -1;
+            margin-top: 10px;
+        }
+        
+        .results-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+            gap: 25px;
+            margin-top: 20px;
+        }
+        
+        .result-card {
+            background-color: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            border-top: 4px solid #3498db;
+            transition: transform 0.3s;
+        }
+        
+        .result-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .result-card h3 {
+            color: #2c3e50;
+            margin-bottom: 15px;
+            font-size: 1.2rem;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            padding-bottom: 12px;
+            border-bottom: 1px dashed #eee;
+        }
+        
+        .stat-name {
+            color: #555;
+        }
+        
+        .stat-value {
+            font-weight: 700;
+            color: #2c3e50;
+        }
+        
+        .highlight {
+            color: #e74c3c;
+            font-weight: 800;
+        }
+        
+        .chart-container {
+            margin-top: 30px;
+            padding: 20px;
+            background-color: #f9fafc;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+            border-top: 1px solid #eee;
+            margin-top: 30px;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 30px;
+        }
+        
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #3498db;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .subject-tag {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            margin: 3px;
+            background-color: #e8f4fc;
+            color: #3498db;
+        }
+        
+        .warning {
+            background-color: #fff8e1;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        
+        .warning p {
+            color: #856404;
+        }
+        
+        .class-rank-settings {
+            margin-top: 20px;
+            border-top: 1px solid #eaeff5;
+            padding-top: 20px;
+        }
+        
+        .class-rank-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 10px;
+            background-color: #f8fafc;
+            border-radius: 6px;
+        }
+        
+        .class-name {
+            flex: 0 0 120px;
+            font-weight: 600;
+            color: #2c3e50;
+        }
+        
+        .rank-input {
+            flex: 0 0 100px;
+            margin-right: 15px;
+        }
+        
+        .comparison-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 25px;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        .comparison-table th {
+            background-color: #3498db;
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .comparison-table td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+        }
+        
+        .comparison-table tr:nth-child(even) {
+            background-color: #f9fafc;
+        }
+        
+        .comparison-table tr:hover {
+            background-color: #f0f7ff;
+        }
+        
+        .export-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .tab-navigation {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #eaeff5;
+        }
+        
+        .tab-btn {
+            padding: 12px 25px;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #7f8c8d;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+        }
+        
+        .tab-btn.active {
+            color: #3498db;
+            border-bottom-color: #3498db;
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        .sorting-method-info {
+            background-color: #e8f6f3;
+            border-left: 4px solid #1abc9c;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 4px;
+        }
+        
+        .sorting-method-info p {
+            color: #0d6654;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-chart-line"></i> 学生成绩分析系统 (按科目排序版)</h1>
+            <p class="subtitle">上传Excel成绩表格，为每个班级分别设置参评人数，各科目按本科目成绩单独排序计算，支持数据导出</p>
+        </header>
+        
+        <div class="main-content">
+            <div class="upload-section">
+                <h2 class="section-title"><i class="fas fa-file-upload"></i> 上传成绩表格</h2>
+                <div class="file-upload-area" id="dropArea">
+                    <i class="fas fa-cloud-upload-alt"></i>
+                    <p>点击或拖拽Excel文件到此处上传</p>
+                    <p>支持.xlsx、.xls、.csv格式</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.csv" hidden>
+                    <div class="file-name" id="fileName">未选择文件</div>
+                </div>
+                
+                <div class="warning">
+                    <p><i class="fas fa-info-circle"></i> 请确保Excel文件包含以下列：班级、姓名、语文、数学、英语、历史、地理、生物、化学、道法、物理</p>
+                </div>
+            </div>
+            
+            <div class="controls-section">
+                <h2 class="section-title"><i class="fas fa-sliders-h"></i> 分析参数设置</h2>
+                
+                <div class="sorting-method-info">
+                    <p><i class="fas fa-sort-amount-down"></i> 排序方式：各科目按本科目成绩单独排序（不是按总分排序）</p>
+                </div>
+                
+                <div class="controls">
+                    <div class="control-group">
+                        <label for="subjectSelect"><i class="fas fa-book"></i> 选择科目</label>
+                        <select id="subjectSelect">
+                            <option value="all">全部科目</option>
+                            <option value="语文">语文</option>
+                            <option value="数学">数学</option>
+                            <option value="英语">英语</option>
+                            <option value="历史">历史</option>
+                            <option value="地理">地理</option>
+                            <option value="生物">生物</option>
+                            <option value="化学">化学</option>
+                            <option value="道法">道法</option>
+                            <option value="物理">物理</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="defaultRank"><i class="fas fa-sort-numeric-down"></i> 默认参评人数</label>
+                        <input type="number" id="defaultRank" min="1" max="100" value="30" placeholder="例如：30">
+                    </div>
+                </div>
+                
+                <div class="class-rank-settings">
+                    <h3 class="section-title"><i class="fas fa-users-cog"></i> 各班级参评人数设置</h3>
+                    <div id="classRankSettings">
+                        <p>请先上传文件以设置各班级参评人数</p>
+                    </div>
+                    <button class="btn" id="applyRankSettings">
+                        <i class="fas fa-check-circle"></i> 应用班级参评设置
+                    </button>
+                </div>
+                
+                <button class="btn btn-analyze" id="analyzeBtn">
+                    <i class="fas fa-chart-bar"></i> 开始分析成绩
+                </button>
+            </div>
+            
+            <div class="results-section hidden" id="resultsSection">
+                <div class="tab-navigation">
+                    <button class="tab-btn active" data-tab="summary">分析结果汇总</button>
+                    <button class="tab-btn" data-tab="comparison">班级对比表格</button>
+                    <button class="tab-btn" data-tab="charts">数据可视化</button>
+                    <button class="tab-btn" data-tab="ranking">学生排名详情</button>
+                </div>
+                
+                <div class="tab-content active" id="summaryTab">
+                    <h2 class="section-title"><i class="fas fa-chart-pie"></i> 成绩分析结果汇总</h2>
+                    
+                    <div class="results-header">
+                        <h3 id="resultsTitle">分析结果</h3>
+                        <div id="subjectTags"></div>
+                    </div>
+                    
+                    <div class="export-buttons">
+                        <button class="btn btn-export" id="exportSummaryBtn">
+                            <i class="fas fa-file-excel"></i> 导出汇总数据
+                        </button>
+                        <button class="btn btn-export" id="exportComparisonBtn">
+                            <i class="fas fa-table"></i> 导出对比表格
+                        </button>
+                        <button class="btn btn-export" id="exportRankingBtn">
+                            <i class="fas fa-list-ol"></i> 导出排名详情
+                        </button>
+                    </div>
+                    
+                    <div class="results-container" id="resultsContainer">
+                        <!-- 结果卡片将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="comparisonTab">
+                    <h2 class="section-title"><i class="fas fa-th"></i> 班级数据对比</h2>
+                    
+                    <div id="comparisonTables">
+                        <!-- 对比表格将通过JS动态生成 -->
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="chartsTab">
+                    <h2 class="section-title"><i class="fas fa-chart-bar"></i> 数据可视化</h2>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="chartTypeSelect"><i class="fas fa-chart-line"></i> 选择图表类型</label>
+                            <select id="chartTypeSelect">
+                                <option value="bar">柱状图</option>
+                                <option value="line">折线图</option>
+                                <option value="radar">雷达图</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="chartMetricSelect"><i class="fas fa-ruler"></i> 选择指标</label>
+                            <select id="chartMetricSelect">
+                                <option value="avgScore">平均分</option>
+                                <option value="excellentRate">优秀率</option>
+                                <option value="passRate">及格率</option>
+                                <option value="excellentCount">优秀人数</option>
+                                <option value="passCount">及格人数</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="chart-container">
+                        <canvas id="scoreChart"></canvas>
+                    </div>
+                    
+                    <div class="chart-container" style="margin-top: 30px;">
+                        <canvas id="subjectChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="tab-content" id="rankingTab">
+                    <h2 class="section-title"><i class="fas fa-list-ol"></i> 学生排名详情</h2>
+                    
+                    <div class="controls">
+                        <div class="control-group">
+                            <label for="rankingClassSelect"><i class="fas fa-users"></i> 选择班级</label>
+                            <select id="rankingClassSelect">
+                                <option value="">请选择班级</option>
+                            </select>
+                        </div>
+                        
+                        <div class="control-group">
+                            <label for="rankingSubjectSelect"><i class="fas fa-book"></i> 选择科目</label>
+                            <select id="rankingSubjectSelect">
+                                <option value="">请选择科目</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="rankingTableContainer">
+                        <!-- 排名表格将通过JS动态生成 -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="loading hidden" id="loading">
+                <div class="spinner"></div>
+                <p>正在分析数据，请稍候...</p>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>学生成绩分析系统 (按科目排序版) &copy; 2023 | 优秀标准：≥满分的80% | 及格标准：≥满分的60%</p>
+            <p>科目满分标准：语文/数学/英语(120分) | 历史/地理/生物/化学(50分) | 道法/物理(70分)</p>
+            <p>排序方式：各科目按本科目成绩单独排序计算</p>
+        </div>
+    </div>
+
+    <script>
+        // 定义科目满分标准
+        const fullScores = {
+            '语文': 120,
+            '数学': 120,
+            '英语': 120,
+            '历史': 50,
+            '地理': 50,
+            '生物': 50,
+            '化学': 50,
+            '道法': 70,
+            '物理': 70
+        };
+        
+        // 定义所有科目
+        const allSubjects = Object.keys(fullScores);
+        
+        // 全局变量
+        let studentData = [];
+        let classList = [];
+        let classRankSettings = {};
+        let analysisResults = {};
+        let rankingDetails = {}; // 存储排名详情数据
+        let currentChart1 = null;
+        let currentChart2 = null;
+        
+        // DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('dropArea');
+        const fileName = document.getElementById('fileName');
+        const defaultRank = document.getElementById('defaultRank');
+        const subjectSelect = document.getElementById('subjectSelect');
+        const classRankSettingsDiv = document.getElementById('classRankSettings');
+        const applyRankSettingsBtn = document.getElementById('applyRankSettings');
+        const analyzeBtn = document.getElementById('analyzeBtn');
+        const resultsSection = document.getElementById('resultsSection');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const subjectTags = document.getElementById('subjectTags');
+        const loading = document.getElementById('loading');
+        const exportSummaryBtn = document.getElementById('exportSummaryBtn');
+        const exportComparisonBtn = document.getElementById('exportComparisonBtn');
+        const exportRankingBtn = document.getElementById('exportRankingBtn');
+        const chartTypeSelect = document.getElementById('chartTypeSelect');
+        const chartMetricSelect = document.getElementById('chartMetricSelect');
+        const comparisonTables = document.getElementById('comparisonTables');
+        const rankingClassSelect = document.getElementById('rankingClassSelect');
+        const rankingSubjectSelect = document.getElementById('rankingSubjectSelect');
+        const rankingTableContainer = document.getElementById('rankingTableContainer');
+        
+        // 文件上传相关事件
+        dropArea.addEventListener('click', () => fileInput.click());
+        
+        fileInput.addEventListener('change', function(e) {
+            if (this.files.length > 0) {
+                handleFile(this.files[0]);
+            }
+        });
+        
+        // 拖放功能
+        dropArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#2980b9';
+            dropArea.style.backgroundColor = '#e6f2ff';
+        });
+        
+        dropArea.addEventListener('dragleave', () => {
+            dropArea.style.borderColor = '#3498db';
+            dropArea.style.backgroundColor = '#f0f8ff';
+        });
+        
+        dropArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropArea.style.borderColor = '#3498db';
+            dropArea.style.backgroundColor = '#f0f8ff';
+            
+            if (e.dataTransfer.files.length > 0) {
+                handleFile(e.dataTransfer.files[0]);
+            }
+        });
+        
+        // 处理上传的文件
+        function handleFile(file) {
+            fileName.textContent = file.name;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+                    
+                    // 处理数据，假设第一行是标题行
+                    processExcelData(jsonData);
+                    
+                } catch (error) {
+                    alert('读取文件时出错，请确保文件格式正确');
+                    console.error(error);
+                }
+            };
+            
+            reader.readAsArrayBuffer(file);
+        }
+        
+        // 处理Excel数据
+        function processExcelData(data) {
+            // 清空之前的数据
+            studentData = [];
+            classList = [];
+            classRankSettings = {};
+            rankingDetails = {};
+            
+            // 获取标题行
+            const headers = data[0].map(h => h ? h.toString().trim() : '');
+            
+            // 检查必要的列是否存在
+            const requiredColumns = ['班级', '姓名'];
+            allSubjects.forEach(subject => requiredColumns.push(subject));
+            
+            for (let i = 1; i < data.length; i++) {
+                const row = data[i];
+                if (!row || row.length === 0) continue;
+                
+                const student = {};
+                for (let j = 0; j < headers.length; j++) {
+                    if (headers[j]) {
+                        student[headers[j]] = row[j];
+                    }
+                }
+                
+                // 转换成绩为数字
+                allSubjects.forEach(subject => {
+                    if (student.hasOwnProperty(subject)) {
+                        student[subject] = parseFloat(student[subject]) || 0;
+                    }
+                });
+                
+                studentData.push(student);
+                
+                // 收集班级列表
+                if (student.班级 && !classList.includes(student.班级)) {
+                    classList.push(student.班级);
+                }
+            }
+            
+            // 更新班级排名设置界面
+            updateClassRankSettings();
+            
+            // 更新排名详情页面的班级和科目选择
+            updateRankingSelects();
+            
+            alert(`成功加载 ${studentData.length} 条学生成绩记录，共 ${classList.length} 个班级`);
+        }
+        
+        // 更新班级排名设置界面
+        function updateClassRankSettings() {
+            classRankSettingsDiv.innerHTML = '';
+            
+            if (classList.length === 0) {
+                classRankSettingsDiv.innerHTML = '<p>请先上传文件以设置各班级参评人数</p>';
+                return;
+            }
+            
+            classList.forEach(className => {
+                const row = document.createElement('div');
+                row.className = 'class-rank-row';
+                
+                // 设置默认值为全局默认值
+                const defaultRankValue = parseInt(defaultRank.value) || 30;
+                classRankSettings[className] = defaultRankValue;
+                
+                row.innerHTML = `
+                    <div class="class-name">${className}</div>
+                    <div>参评前</div>
+                    <input type="number" class="rank-input" id="rank-${className}" 
+                           min="1" max="100" value="${defaultRankValue}">
+                    <div>名学生</div>
+                `;
+                
+                classRankSettingsDiv.appendChild(row);
+                
+                // 添加事件监听
+                const rankInput = document.getElementById(`rank-${className}`);
+                rankInput.addEventListener('change', function() {
+                    classRankSettings[className] = parseInt(this.value) || defaultRankValue;
+                });
+            });
+        }
+        
+        // 更新排名详情页面的班级和科目选择
+        function updateRankingSelects() {
+            rankingClassSelect.innerHTML = '<option value="">请选择班级</option>';
+            rankingSubjectSelect.innerHTML = '<option value="">请选择科目</option>';
+            
+            classList.forEach(className => {
+                const option = document.createElement('option');
+                option.value = className;
+                option.textContent = className;
+                rankingClassSelect.appendChild(option);
+            });
+            
+            allSubjects.forEach(subject => {
+                const option = document.createElement('option');
+                option.value = subject;
+                option.textContent = subject;
+                rankingSubjectSelect.appendChild(option);
+            });
+        }
+        
+        // 应用班级排名设置
+        applyRankSettingsBtn.addEventListener('click', function() {
+            // 从输入框中更新设置
+            classList.forEach(className => {
+                const rankInput = document.getElementById(`rank-${className}`);
+                if (rankInput) {
+                    classRankSettings[className] = parseInt(rankInput.value) || parseInt(defaultRank.value) || 30;
+                }
+            });
+            
+            alert(`已更新各班级参评人数设置`);
+        });
+        
+        // 分析按钮事件
+        analyzeBtn.addEventListener('click', analyzeScores);
+        
+        // 分析成绩函数 - 按科目分别排序
+        function analyzeScores() {
+            // 验证数据是否已加载
+            if (studentData.length === 0) {
+                alert('请先上传成绩文件');
+                return;
+            }
+            
+            // 显示加载动画
+            loading.classList.remove('hidden');
+            resultsSection.classList.add('hidden');
+            
+            // 使用setTimeout让UI有机会更新
+            setTimeout(() => {
+                try {
+                    // 获取用户选择的参数
+                    const selectedSubject = subjectSelect.value;
+                    
+                    // 确定要分析的科目
+                    const subjectsToAnalyze = selectedSubject === 'all' ? allSubjects : [selectedSubject];
+                    
+                    // 重置分析结果和排名详情
+                    analysisResults = {};
+                    rankingDetails = {};
+                    
+                    // 为每个班级分析数据
+                    classList.forEach(className => {
+                        // 获取该班级的参评人数
+                        const rankNum = classRankSettings[className] || parseInt(defaultRank.value) || 30;
+                        
+                        // 筛选该班级的数据
+                        const classData = studentData.filter(student => student.班级 === className);
+                        
+                        // 分析每个科目（按本科目成绩单独排序）
+                        const classResults = {};
+                        const classRanking = {};
+                        
+                        subjectsToAnalyze.forEach(subject => {
+                            // 按本科目成绩排序
+                            const rankedBySubject = [...classData];
+                            rankedBySubject.sort((a, b) => {
+                                const scoreA = a[subject] || 0;
+                                const scoreB = b[subject] || 0;
+                                return scoreB - scoreA; // 降序排列
+                            });
+                            
+                            // 取前N名
+                            const topNData = rankedBySubject.slice(0, Math.min(rankNum, rankedBySubject.length));
+                            
+                            // 保存排名详情
+                            classRanking[subject] = topNData.map((student, index) => ({
+                                rank: index + 1,
+                                name: student.姓名,
+                                score: student[subject] || 0,
+                                className: className
+                            }));
+                            
+                            // 分析该科目成绩
+                            const scores = topNData.map(student => student[subject] || 0);
+                            classResults[subject] = analyzeSubjectScores(subject, scores);
+                        });
+                        
+                        // 保存该班级的分析结果
+                        analysisResults[className] = {
+                            rankNum,
+                            results: classResults,
+                            studentCount: classData.length,
+                            analyzedCount: Math.min(rankNum, classData.length)
+                        };
+                        
+                        // 保存排名详情
+                        rankingDetails[className] = classRanking;
+                    });
+                    
+                    // 显示结果
+                    displayResults(analysisResults, subjectsToAnalyze);
+                    
+                } catch (error) {
+                    console.error(error);
+                    alert('分析过程中出错，请检查数据格式');
+                } finally {
+                    // 隐藏加载动画
+                    loading.classList.add('hidden');
+                }
+            }, 100);
+        }
+        
+        // 分析单个科目的成绩
+        function analyzeSubjectScores(subject, scores) {
+            const fullScore = fullScores[subject];
+            const excellentScore = fullScore * 0.8;
+            const passScore = fullScore * 0.6;
+            
+            // 计算基本统计数据
+            const maxScore = Math.max(...scores);
+            const minScore = Math.min(...scores);
+            const sum = scores.reduce((a, b) => a + b, 0);
+            const avgScore = sum / scores.length;
+            
+            // 计算优秀和及格人数
+            const excellentCount = scores.filter(score => score >= excellentScore).length;
+            const passCount = scores.filter(score => score >= passScore).length;
+            
+            // 计算百分比
+            const excellentRate = (excellentCount / scores.length * 100).toFixed(2);
+            const passRate = (passCount / scores.length * 100).toFixed(2);
+            
+            return {
+                subject,
+                fullScore,
+                excellentScore,
+                passScore,
+                maxScore,
+                minScore,
+                avgScore: avgScore.toFixed(2),
+                excellentCount,
+                passCount,
+                excellentRate,
+                passRate,
+                totalStudents: scores.length,
+                scores
+            };
+        }
+        
+        // 显示分析结果
+        function displayResults(results, subjectsToAnalyze) {
+            // 更新标题
+            const subjectText = subjectsToAnalyze.length === allSubjects.length ? '全部科目' : subjectsToAnalyze.join(', ');
+            resultsTitle.textContent = `各班级成绩分析结果 (${subjectText}) - 按科目单独排序`;
+            
+            // 更新科目标签
+            subjectTags.innerHTML = '';
+            subjectsToAnalyze.forEach(subject => {
+                const tag = document.createElement('span');
+                tag.className = 'subject-tag';
+                tag.textContent = `${subject} (满分:${fullScores[subject]}分)`;
+                subjectTags.appendChild(tag);
+            });
+            
+            // 清空结果容器
+            resultsContainer.innerHTML = '';
+            
+            // 为每个班级创建结果卡片
+            Object.keys(results).forEach(className => {
+                const classResult = results[className];
+                const card = document.createElement('div');
+                card.className = 'result-card';
+                
+                card.innerHTML = `
+                    <h3>${className} (各科取前${classResult.rankNum}名，共${classResult.studentCount}人)</h3>
+                    <div class="stat-item">
+                        <span class="stat-name">排序方式</span>
+                        <span class="stat-value">按科目成绩单独排序</span>
+                    </div>
+                `;
+                
+                // 为每个科目添加统计信息
+                subjectsToAnalyze.forEach(subject => {
+                    const subjectResult = classResult.results[subject];
+                    if (subjectResult) {
+                        card.innerHTML += `
+                            <div class="stat-item">
+                                <span class="stat-name">${subject}平均分</span>
+                                <span class="stat-value">${subjectResult.avgScore}</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">${subject}优秀率</span>
+                                <span class="stat-value">${subjectResult.excellentRate}%</span>
+                            </div>
+                        `;
+                    }
+                });
+                
+                resultsContainer.appendChild(card);
+            });
+            
+            // 生成对比表格
+            generateComparisonTables(results, subjectsToAnalyze);
+            
+            // 创建图表
+            createCharts(results, subjectsToAnalyze);
+            
+            // 显示结果区域
+            resultsSection.classList.remove('hidden');
+            
+            // 激活第一个标签页
+            switchTab('summary');
+            
+            // 为排名详情页面的选择器添加事件监听
+            rankingClassSelect.addEventListener('change', displayRankingTable);
+            rankingSubjectSelect.addEventListener('change', displayRankingTable);
+        }
+        
+        // 生成对比表格
+        function generateComparisonTables(results, subjectsToAnalyze) {
+            comparisonTables.innerHTML = '';
+            
+            // 为每个科目创建对比表格
+            subjectsToAnalyze.forEach(subject => {
+                const tableSection = document.createElement('div');
+                tableSection.className = 'table-section';
+                tableSection.innerHTML = `<h3>${subject} 各班级对比 (满分: ${fullScores[subject]}分) - 按本科目成绩排序</h3>`;
+                
+                const table = document.createElement('table');
+                table.className = 'comparison-table';
+                
+                // 表头
+                let tableHTML = `
+                    <thead>
+                        <tr>
+                            <th>班级</th>
+                            <th>参评人数</th>
+                            <th>平均分</th>
+                            <th>最高分</th>
+                            <th>最低分</th>
+                            <th>优秀人数</th>
+                            <th>优秀率</th>
+                            <th>及格人数</th>
+                            <th>及格率</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                `;
+                
+                // 表格内容
+                Object.keys(results).forEach(className => {
+                    const classResult = results[className];
+                    const subjectResult = classResult.results[subject];
+                    
+                    if (subjectResult) {
+                        tableHTML += `
+                            <tr>
+                                <td>${className}</td>
+                                <td>${subjectResult.totalStudents}</td>
+                                <td>${subjectResult.avgScore}</td>
+                                <td>${subjectResult.maxScore}</td>
+                                <td>${subjectResult.minScore}</td>
+                                <td>${subjectResult.excellentCount}</td>
+                                <td>${subjectResult.excellentRate}%</td>
+                                <td>${subjectResult.passCount}</td>
+                                <td>${subjectResult.passRate}%</td>
+                            </tr>
+                        `;
+                    }
+                });
+                
+                tableHTML += '</tbody>';
+                table.innerHTML = tableHTML;
+                tableSection.appendChild(table);
+                comparisonTables.appendChild(tableSection);
+            });
+        }
+        
+        // 创建图表
+        function createCharts(results, subjectsToAnalyze) {
+            // 第一个图表：各班级各科目平均分对比
+            const ctx1 = document.getElementById('scoreChart').getContext('2d');
+            
+            // 销毁之前的图表
+            if (currentChart1) {
+                currentChart1.destroy();
+            }
+            
+            // 准备数据
+            const classNames = Object.keys(results);
+            const datasets = [];
+            
+            // 为每个科目创建一个数据集
+            subjectsToAnalyze.forEach((subject, index) => {
+                const colors = [
+                    'rgba(52, 152, 219, 0.7)',
+                    'rgba(46, 204, 113, 0.7)',
+                    'rgba(155, 89, 182, 0.7)',
+                    'rgba(241, 196, 15, 0.7)',
+                    'rgba(230, 126, 34, 0.7)',
+                    'rgba(231, 76, 60, 0.7)',
+                    'rgba(149, 165, 166, 0.7)',
+                    'rgba(26, 188, 156, 0.7)',
+                    'rgba(52, 73, 94, 0.7)'
+                ];
+                
+                const subjectData = classNames.map(className => {
+                    return results[className].results[subject] ? parseFloat(results[className].results[subject].avgScore) : 0;
+                });
+                
+                datasets.push({
+                    label: subject,
+                    data: subjectData,
+                    backgroundColor: colors[index % colors.length],
+                    borderColor: colors[index % colors.length].replace('0.7', '1'),
+                    borderWidth: 1
+                });
+            });
+            
+            currentChart1 = new Chart(ctx1, {
+                type: 'bar',
+                data: {
+                    labels: classNames,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: '平均分'
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: '各班级各科目平均分对比 (按科目单独排序)',
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+            
+            // 第二个图表：各班级指定指标对比
+            const ctx2 = document.getElementById('subjectChart').getContext('2d');
+            
+            // 销毁之前的图表
+            if (currentChart2) {
+                currentChart2.destroy();
+            }
+            
+            // 更新第二个图表
+            updateSecondChart();
+            
+            // 为图表类型和指标选择器添加事件监听
+            chartTypeSelect.addEventListener('change', updateSecondChart);
+            chartMetricSelect.addEventListener('change', updateSecondChart);
+        }
+        
+        // 更新第二个图表
+        function updateSecondChart() {
+            const ctx2 = document.getElementById('subjectChart').getContext('2d');
+            const chartType = chartTypeSelect.value;
+            const metric = chartMetricSelect.value;
+            
+            // 销毁之前的图表
+            if (currentChart2) {
+                currentChart2.destroy();
+            }
+            
+            const classNames = Object.keys(analysisResults);
+            const subjects = subjectSelect.value === 'all' ? allSubjects : [subjectSelect.value];
+            
+            // 根据选择的指标准备数据
+            const datasets = [];
+            const metricLabels = {
+                'avgScore': '平均分',
+                'excellentRate': '优秀率(%)',
+                'passRate': '及格率(%)',
+                'excellentCount': '优秀人数',
+                'passCount': '及格人数'
+            };
+            
+            // 为每个班级创建一个数据集
+            classNames.forEach((className, index) => {
+                const colors = [
+                    'rgba(52, 152, 219, 0.7)',
+                    'rgba(46, 204, 113, 0.7)',
+                    'rgba(155, 89, 182, 0.7)',
+                    'rgba(241, 196, 15, 0.7)',
+                    'rgba(230, 126, 34, 0.7)',
+                    'rgba(231, 76, 60, 0.7)',
+                    'rgba(149, 165, 166, 0.7)',
+                    'rgba(26, 188, 156, 0.7)',
+                    'rgba(52, 73, 94, 0.7)'
+                ];
+                
+                const classData = subjects.map(subject => {
+                    const result = analysisResults[className]?.results[subject];
+                    if (!result) return 0;
+                    
+                    if (metric === 'avgScore') return parseFloat(result.avgScore);
+                    if (metric === 'excellentRate') return parseFloat(result.excellentRate);
+                    if (metric === 'passRate') return parseFloat(result.passRate);
+                    if (metric === 'excellentCount') return result.excellentCount;
+                    if (metric === 'passCount') return result.passCount;
+                    return 0;
+                });
+                
+                datasets.push({
+                    label: className,
+                    data: classData,
+                    backgroundColor: colors[index % colors.length],
+                    borderColor: colors[index % colors.length].replace('0.7', '1'),
+                    borderWidth: 2,
+                    fill: chartType === 'radar' ? true : false
+                });
+            });
+            
+            currentChart2 = new Chart(ctx2, {
+                type: chartType,
+                data: {
+                    labels: subjects,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    scales: chartType === 'radar' ? {
+                        r: {
+                            beginAtZero: true
+                        }
+                    } : {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: metricLabels[metric]
+                            }
+                        }
+                    },
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: `各班级${metricLabels[metric]}对比 (${subjects.length}个科目，按科目单独排序)`,
+                            font: {
+                                size: 16
+                            }
+                        },
+                        legend: {
+                            position: 'top',
+                        }
+                    }
+                }
+            });
+        }
+        
+        // 显示排名表格
+        function displayRankingTable() {
+            const className = rankingClassSelect.value;
+            const subject = rankingSubjectSelect.value;
+            
+            if (!className || !subject) {
+                rankingTableContainer.innerHTML = '<p>请选择班级和科目以查看排名详情</p>';
+                return;
+            }
+            
+            const rankingData = rankingDetails[className]?.[subject];
+            if (!rankingData || rankingData.length === 0) {
+                rankingTableContainer.innerHTML = `<p>${className} 的 ${subject} 科目没有排名数据</p>`;
+                return;
+            }
+            
+            const table = document.createElement('table');
+            table.className = 'comparison-table';
+            
+            let tableHTML = `
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>姓名</th>
+                        <th>成绩</th>
+                        <th>班级</th>
+                    </tr>
+                </thead>
+                <tbody>
+            `;
+            
+            rankingData.forEach(item => {
+                tableHTML += `
+                    <tr>
+                        <td>第${item.rank}名</td>
+                        <td>${item.name}</td>
+                        <td>${item.score}</td>
+                        <td>${item.className}</td>
+                    </tr>
+                `;
+            });
+            
+            tableHTML += '</tbody>';
+            table.innerHTML = tableHTML;
+            
+            rankingTableContainer.innerHTML = `
+                <h3>${className} ${subject} 科目排名详情 (前${analysisResults[className]?.rankNum || 30}名)</h3>
+            `;
+            rankingTableContainer.appendChild(table);
+        }
+        
+        // 导出汇总数据
+        exportSummaryBtn.addEventListener('click', function() {
+            if (Object.keys(analysisResults).length === 0) {
+                alert('请先进行成绩分析');
+                return;
+            }
+            
+            // 准备导出数据
+            const exportData = [];
+            
+            // 添加标题行
+            const header = ['班级', '参评人数', '科目', '平均分', '最高分', '最低分', '优秀人数', '优秀率%', '及格人数', '及格率%', '班级总人数', '排序方式'];
+            exportData.push(header);
+            
+            // 添加数据行
+            Object.keys(analysisResults).forEach(className => {
+                const classResult = analysisResults[className];
+                const subjects = Object.keys(classResult.results);
+                
+                subjects.forEach(subject => {
+                    const subjectResult = classResult.results[subject];
+                    const row = [
+                        className,
+                        classResult.rankNum,
+                        subject,
+                        subjectResult.avgScore,
+                        subjectResult.maxScore,
+                        subjectResult.minScore,
+                        subjectResult.excellentCount,
+                        subjectResult.excellentRate,
+                        subjectResult.passCount,
+                        subjectResult.passRate,
+                        classResult.studentCount,
+                        '按科目单独排序'
+                    ];
+                    exportData.push(row);
+                });
+            });
+            
+            // 创建工作表
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "成绩分析汇总");
+            
+            // 导出文件
+            const date = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `成绩分析汇总_${date}.xlsx`);
+        });
+        
+        // 导出对比表格 - 各科在一页上显示
+        exportComparisonBtn.addEventListener('click', function() {
+            if (Object.keys(analysisResults).length === 0) {
+                alert('请先进行成绩分析');
+                return;
+            }
+            
+            // 准备导出数据 - 所有科目在一个工作表上
+            const wb = XLSX.utils.book_new();
+            const classNames = Object.keys(analysisResults);
+            const subjects = subjectSelect.value === 'all' ? allSubjects : [subjectSelect.value];
+            
+            // 创建一个工作表，包含所有科目的数据
+            const exportData = [];
+            
+            // 添加总标题
+            exportData.push(['班级成绩对比表格 (按科目单独排序)']);
+            exportData.push(['生成时间: ' + new Date().toLocaleString()]);
+            exportData.push(['']); // 空行
+            
+            // 为每个科目添加数据
+            subjects.forEach(subject => {
+                // 科目标题
+                exportData.push([`${subject} (满分: ${fullScores[subject]}分)`]);
+                
+                // 表头
+                exportData.push(['班级', '参评人数', '平均分', '最高分', '最低分', '优秀人数', '优秀率%', '及格人数', '及格率%', '班级总人数', '排序方式']);
+                
+                // 数据行
+                classNames.forEach(className => {
+                    const classResult = analysisResults[className];
+                    const subjectResult = classResult.results[subject];
+                    
+                    if (subjectResult) {
+                        const row = [
+                            className,
+                            classResult.rankNum,
+                            subjectResult.avgScore,
+                            subjectResult.maxScore,
+                            subjectResult.minScore,
+                            subjectResult.excellentCount,
+                            subjectResult.excellentRate,
+                            subjectResult.passCount,
+                            subjectResult.passRate,
+                            classResult.studentCount,
+                            '按科目单独排序'
+                        ];
+                        exportData.push(row);
+                    }
+                });
+                
+                // 在科目之间添加空行
+                exportData.push(['']);
+                exportData.push(['']);
+            });
+            
+            // 创建工作表
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            
+            // 设置列宽
+            const colWidths = [
+                {wch: 10}, // 班级
+                {wch: 10}, // 参评人数
+                {wch: 10}, // 平均分
+                {wch: 10}, // 最高分
+                {wch: 10}, // 最低分
+                {wch: 10}, // 优秀人数
+                {wch: 10}, // 优秀率%
+                {wch: 10}, // 及格人数
+                {wch: 10}, // 及格率%
+                {wch: 10}, // 班级总人数
+                {wch: 15}  // 排序方式
+            ];
+            ws['!cols'] = colWidths;
+            
+            // 合并总标题单元格
+            if (!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({s: {r: 0, c: 0}, e: {r: 0, c: 10}});
+            ws['!merges'].push({s: {r: 1, c: 0}, e: {r: 1, c: 10}});
+            
+            // 合并科目标题单元格
+            let currentRow = 3; // 从第4行开始（0-based索引）
+            subjects.forEach(subject => {
+                ws['!merges'].push({s: {r: currentRow, c: 0}, e: {r: currentRow, c: 10}});
+                currentRow += classNames.length + 4; // 标题行 + 表头行 + 数据行 + 两个空行
+            });
+            
+            XLSX.utils.book_append_sheet(wb, ws, "班级成绩对比");
+            
+            // 导出文件
+            const date = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `班级成绩对比_${date}.xlsx`);
+        });
+        
+        // 导出排名详情
+        exportRankingBtn.addEventListener('click', function() {
+            if (Object.keys(rankingDetails).length === 0) {
+                alert('请先进行成绩分析');
+                return;
+            }
+            
+            // 准备导出数据 - 所有班级所有科目的排名详情
+            const wb = XLSX.utils.book_new();
+            const classNames = Object.keys(rankingDetails);
+            const subjects = subjectSelect.value === 'all' ? allSubjects : [subjectSelect.value];
+            
+            // 创建一个工作表，包含所有排名数据
+            const exportData = [];
+            
+            // 添加总标题
+            exportData.push(['学生排名详情 (按科目单独排序)']);
+            exportData.push(['生成时间: ' + new Date().toLocaleString()]);
+            exportData.push(['']); // 空行
+            
+            // 为每个班级每个科目添加数据
+            classNames.forEach(className => {
+                subjects.forEach(subject => {
+                    const rankingData = rankingDetails[className]?.[subject];
+                    if (!rankingData || rankingData.length === 0) return;
+                    
+                    // 班级和科目标题
+                    exportData.push([`${className} - ${subject} 科目排名 (前${analysisResults[className]?.rankNum || 30}名)`]);
+                    
+                    // 表头
+                    exportData.push(['排名', '姓名', '成绩', '班级']);
+                    
+                    // 数据行
+                    rankingData.forEach(item => {
+                        const row = [
+                            item.rank,
+                            item.name,
+                            item.score,
+                            item.className
+                        ];
+                        exportData.push(row);
+                    });
+                    
+                    // 在班级/科目之间添加空行
+                    exportData.push(['']);
+                });
+            });
+            
+            // 创建工作表
+            const ws = XLSX.utils.aoa_to_sheet(exportData);
+            
+            // 设置列宽
+            const colWidths = [
+                {wch: 8},  // 排名
+                {wch: 15}, // 姓名
+                {wch: 10}, // 成绩
+                {wch: 10}  // 班级
+            ];
+            ws['!cols'] = colWidths;
+            
+            // 合并标题单元格
+            if (!ws['!merges']) ws['!merges'] = [];
+            ws['!merges'].push({s: {r: 0, c: 0}, e: {r: 0, c: 3}});
+            ws['!merges'].push({s: {r: 1, c: 0}, e: {r: 1, c: 3}});
+            
+            XLSX.utils.book_append_sheet(wb, ws, "学生排名详情");
+            
+            // 导出文件
+            const date = new Date().toISOString().slice(0, 10);
+            XLSX.writeFile(wb, `学生排名详情_${date}.xlsx`);
+        });
+        
+        // 标签页切换功能
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabId = this.getAttribute('data-tab');
+                switchTab(tabId);
+            });
+        });
+        
+        function switchTab(tabId) {
+            // 更新按钮状态
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.classList.remove('active');
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('active');
+                }
+            });
+            
+            // 更新内容显示
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+                if (content.id === tabId + 'Tab') {
+                    content.classList.add('active');
+                }
+            });
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', function() {
+            console.log('按科目排序版成绩分析系统已初始化');
+            console.log('支持科目:', allSubjects.join(', '));
+            console.log('满分标准:', fullScores);
+            console.log('排序方式: 各科目按本科目成绩单独排序');
+            
+            // 为默认参评人数输入框添加事件监听
+            defaultRank.addEventListener('change', function() {
+                // 更新所有班级的默认值
+                classList.forEach(className => {
+                    const rankInput = document.getElementById(`rank-${className}`);
+                    if (rankInput && !rankInput.dataset.manuallyChanged) {
+                        rankInput.value = this.value;
+                        classRankSettings[className] = parseInt(this.value) || 30;
+                    }
+                });
+            });
+            
+            // 标记手动修改过的输入框
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('rank-input')) {
+                    e.target.dataset.manuallyChanged = 'true';
+                }
+            });
+        });
+    </script>
+</body>
+</html>
